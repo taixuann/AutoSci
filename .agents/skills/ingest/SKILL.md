@@ -1,7 +1,7 @@
 ---
 name: ingest
-description: Ingest a paper into the wiki — creates pages (papers + concepts + methods + people) and builds all cross-references and graph edges. Trigger whenever the user says "ingest", "add this paper", drops a `.pdf` / `.tex` / arXiv URL, or asks to fold a paper into the knowledge base.
-argument-hint: <local-path-or-arXiv-URL> [--discover] [--visualize]
+description: Ingest a paper into the wiki — creates pages (papers + concepts + methods + people) and builds all cross-references and graph edges. Trigger whenever the user says "ingest", "add this paper", drops a `.pdf` / `.tex` / arXiv URL or a Zotero item link/key, or asks to fold a paper into the knowledge base.
+argument-hint: <local-path-or-arXiv-URL-or-Zotero-item> [--discover] [--visualize]
 ---
 
 # $ingest
@@ -11,6 +11,7 @@ Turn one paper into a fully wired set of wiki pages. Emit well-formed entities a
 Use these local references on demand:
 
 - `references/pdf-preprocessing.md` — arXiv-ID recovery, tex fetching, prepare-paper handoff for direct PDF drops
+- `references/zotero-source.md` — Zotero item reference as a source: metadata fetch, PDF download, and failure-mode table
 - `references/dedup-policy.md` — merge-vs-create decision rule for concepts and methods, and the line that separates `$ingest` shape checks from `$check` semantic audits
 - `references/cross-references.md` — forward/reverse link matrix and paper-to-paper edge-type selection
 - `references/init-mode.md` — manifest-driven handoff from init and batch-safety conventions
@@ -20,7 +21,7 @@ Open `runtime/schema/entities.yaml` for frontmatter field definitions and `runti
 
 ## Inputs
 
-- `source`: one of — arXiv URL (e.g. `https://arxiv.org/abs/2106.09685`), local `.tex`, local `.pdf`, or a `canonical_ingest_path` handed off by `$init` via `.checkpoints/init-sources.json`(see `references/init-mode.md`)
+- `source`: one of — arXiv URL (e.g. `https://arxiv.org/abs/2106.09685`), local `.tex`, local `.pdf`, a Zotero item reference (8-char item key like `ABCD1234`, `zotero:ABCD1234`, or `https://zotero.org/users/<id>/items/<key>`; see `references/zotero-source.md`), or a `canonical_ingest_path` handed off by `$init` via `.checkpoints/init-sources.json`(see `references/init-mode.md`)
 - `--discover` (optional, default **off**): after the final report, invoke `$discover --anchor <this-paper's-arxiv-id>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 - `--visualize` (optional, default **off**): after Step 7 rebuild, regenerate Canvas visualization artifacts via `tools/visualize.py generate-canvas`. Skipped automatically in INIT MODE — the parent init workflow handles visualization once after the batch. Treat this as a user-owned flag: do not set it based on repo state. (The interactive web Graph view lives in the SPA at `app/modules/graph.js`, served by `tools/serve.py`; it reads `wiki/graph/` live and needs no per-ingest regeneration.)
 
@@ -56,6 +57,7 @@ Open `runtime/schema/entities.yaml` for frontmatter field definitions and `runti
 - `wiki/index.md` — APPEND
 - `wiki/log.md` — APPEND via tool
 - `wiki/canvases/*.canvas` — CREATE/OVERWRITE (only when `--visualize` is set and not in INIT MODE)
+- `raw/tmp/zotero/{<key>.json,<key>_*.pdf}` — CREATE (only when the source is a Zotero item reference)
 
 ### Graph edges created
 
@@ -100,6 +102,7 @@ export PYTHON_BIN
 2. If the source is an arXiv URL, extract the arXiv ID, use `"$PYTHON_BIN" tools/fetch_s2.py paper <arxiv-id>` to recover the title when possible, then run `"$PYTHON_BIN" tools/init_discovery.py download --raw-root raw --arxiv-id <arxiv-id> --title "<title-or-arxiv-id>"`. Continue from the returned `canonical_ingest_path`. The helper tries arXiv source first and falls back to PDF; do not call `fetch_arxiv.py` for a single paper because it is RSS-only.
 3. If the source is a local `.tex`, use it directly.
 4. If the source is a local `.pdf`, run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared `.tex` under `raw/tmp/` before continuing.
+5. If the source is a Zotero item reference, follow `references/zotero-source.md`: `tools/zotero_fetch.py item` recovers normalized metadata under `raw/tmp/zotero/`, `tools/zotero_fetch.py download` fetches the PDF attachment, then continue from that PDF exactly as in case 4. Missing credentials, a missing PDF, or bytes not stored on zotero.org all fail closed with a machine-readable error — report it and ask the user for a local path instead of inventing content.
 
 Raw persistence rule: never copy or duplicate a file already under `raw/discovered/`, `raw/tmp/`, or `raw/papers/` into a different raw subtree.
 
@@ -243,7 +246,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 
 ## Constraints
 
-- `raw/papers/`, `raw/notes/`, `raw/web/` are user-owned and read-only. Direct local `$ingest` may add prepared sidecars under `raw/tmp/`; direct arXiv ingests may write fetched source artifacts under `raw/discovered/`. INIT MODE treats all of `raw/` as read-only.
+- `raw/papers/`, `raw/notes/`, `raw/web/` are user-owned and read-only. Direct local `$ingest` may add prepared sidecars under `raw/tmp/`; direct arXiv ingests may write fetched source artifacts under `raw/discovered/`; direct Zotero ingests may write metadata/PDF artifacts under `raw/tmp/zotero/`. INIT MODE treats all of `raw/` as read-only.
 - `wiki/graph/` is tool-owned. Edit only through `tools/research_wiki.py`.
 - Slugs always come from `tools/research_wiki.py slug`. Never hand-craft.
 - Every forward link writes its reverse link in the same turn — the wiki's bidirectional-link invariant. The only exception is links to `wiki/foundations/`, which are terminal.
@@ -261,7 +264,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 
 ## Error Handling
 
-See `references/error-handling.md`. Highlights: source parse failures cascade tex → PDF → vision API → user handoff; S2 outages default `importance` to 3 and skip citation backfill; DeepXiv outages skip enrichment silently; slug collisions append a numeric suffix.
+See `references/error-handling.md`. Highlights: source parse failures cascade tex → PDF → vision API → user handoff; S2 outages default `importance` to 3 and skip citation backfill; DeepXiv outages skip enrichment silently; slug collisions append a numeric suffix; Zotero failures (`no_pdf_attachment`, `file_not_on_server`, missing credentials) stop the Zotero path and hand back to the user with the tool's error JSON — never fabricate the paper's content from metadata alone.
 
 ## Dependencies
 
@@ -276,6 +279,8 @@ See `references/error-handling.md`. Highlights: source parse failures cascade te
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/`
 - `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"] [--arxiv-id "<recovered-arxiv-id>"]`
+- `"$PYTHON_BIN" tools/zotero_fetch.py item <ref> [-o raw/tmp/zotero/<key>.json]` — Zotero metadata (only when the source is a Zotero item reference)
+- `"$PYTHON_BIN" tools/zotero_fetch.py download <ref> [--from-attachment-url]` — Zotero PDF attachment under `raw/tmp/zotero/` (only when the source is a Zotero item reference)
 - `"$PYTHON_BIN" tools/init_discovery.py download --raw-root raw --arxiv-id <id> --title "<title-or-id>"` — single-paper arXiv source/PDF download into `raw/discovered/`
 - `"$PYTHON_BIN" tools/fetch_s2.py paper|citations|references <arxiv-id>`
 - `"$PYTHON_BIN" tools/fetch_deepxiv.py brief|head|social <arxiv-id>`
@@ -288,6 +293,7 @@ See `references/error-handling.md`. Highlights: source parse failures cascade te
 
 ### Skills
 
+- `$pyzotero` — standalone third-party skill for ad-hoc Zotero library queries (collections, tags, exports); `$ingest` itself only needs `tools/zotero_fetch.py`
 - `$init` / `$init` — calls ingest one paper at a time in INIT MODE SERIAL by default, or in parallel subagents via INIT MODE PARALLEL when supported
 - `$check` — audits wiki state after `$ingest` completes; owns every semantic check `$ingest` intentionally does not perform
 - `$discover` — optional follow-up when `--discover` is set; produces a shortlist of related papers the user may want to ingest next
@@ -298,3 +304,4 @@ See `references/error-handling.md`. Highlights: source parse failures cascade te
 - Semantic Scholar (via `tools/fetch_s2.py`)
 - DeepXiv (via `tools/fetch_deepxiv.py`, optional; graceful fallback)
 - arXiv (source download)
+- Zotero Web API (via `tools/zotero_fetch.py`, optional; only for Zotero sources — needs `ZOTERO_*` credentials in `.env`)

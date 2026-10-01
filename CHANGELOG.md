@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- **Zotero source for `$ingest`**: the third-party [`pyzotero`](https://github.com/K-Dense-AI/scientific-agent-skills) skill is installed at `.agents/skills/pyzotero/`, and `$ingest` now accepts a Zotero item reference (8-char key, `zotero:<key>`, or zotero.org item URL) as a source. New `tools/zotero_fetch.py item|download` resolves normalized metadata and the PDF attachment under `raw/tmp/zotero/`, then hands off to the existing `prepare_paper_source.py` pipeline; failures (`no_pdf_attachment`, `file_not_on_server`, missing `ZOTERO_*` credentials) are fail-closed with machine-readable errors, with an opt-in `--from-attachment-url` fallback (`%PDF` magic + 200 MB cap). Credentials are documented in `.env.example`; the Codex sandbox prefix-rule table (`i18n/{en,zh}/AGENTS.md`) and `_sandbox.py` gained a `tools/zotero_fetch.py` entry. Bilingual workflow docs: `i18n/{en,zh}/skills/ingest/references/zotero-source.md`.
+
 ## [1.4.0] - 2026-05-18
 
 ### Added

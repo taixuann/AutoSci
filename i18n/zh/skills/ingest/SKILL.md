@@ -1,7 +1,7 @@
 ---
 name: ingest
-description: 把一篇论文 ingest 进 wiki —— 建立 papers + concepts + methods + people 页面，并完成所有双向交叉引用与 graph edge。当用户说 "ingest"、"加入这篇论文"、丢 `.pdf` / `.tex` / arXiv URL 或要求把论文折叠进知识库时触发。
-argument-hint: <local-path-or-arXiv-URL> [--discover] [--visualize]
+description: 把一篇论文 ingest 进 wiki —— 建立 papers + concepts + methods + people 页面，并完成所有双向交叉引用与 graph edge。当用户说 "ingest"、"加入这篇论文"、丢 `.pdf` / `.tex` / arXiv URL 或 Zotero 条目链接/key 或要求把论文折叠进知识库时触发。
+argument-hint: <local-path-or-arXiv-URL-or-Zotero-item> [--discover] [--visualize]
 ---
 
 # $ingest
@@ -11,6 +11,7 @@ argument-hint: <local-path-or-arXiv-URL> [--discover] [--visualize]
 按需打开下列本地参考文件：
 
 - `references/pdf-preprocessing.md` —— 直接 PDF 输入时的 arXiv-ID 恢复、tex 抓取、prepare-paper 交接流程
+- `references/zotero-source.md` —— 以 Zotero 条目引用作为来源：元数据获取、PDF 下载与失败模式表
 - `references/dedup-policy.md` —— concept / method 的合并与新建决策规则，以及 `$ingest` 形状检查与 `$check` 语义审计的边界
 - `references/cross-references.md` —— 正向/反向链接矩阵与 paper-to-paper edge 类型选择
 - `references/init-mode.md` —— init 的 manifest 交接与 batch 安全约束
@@ -20,7 +21,7 @@ argument-hint: <local-path-or-arXiv-URL> [--discover] [--visualize]
 
 ## Inputs
 
-- `source`：四种之一 —— arXiv URL（例如 `https://arxiv.org/abs/2106.09685`）、本地 `.tex`、本地 `.pdf`、或 `$init` 通过 `.checkpoints/init-sources.json` 交接的 `canonical_ingest_path`（见 `references/init-mode.md`）
+- `source`：五种之一 —— arXiv URL（例如 `https://arxiv.org/abs/2106.09685`）、本地 `.tex`、本地 `.pdf`、Zotero 条目引用（8 位 item key 如 `ABCD1234`、`zotero:ABCD1234` 或 `https://zotero.org/users/<id>/items/<key>`，见 `references/zotero-source.md`）、或 `$init` 通过 `.checkpoints/init-sources.json` 交接的 `canonical_ingest_path`（见 `references/init-mode.md`）
 - `--discover`（可选，默认 **关闭**）：在最终 report 之后调用 `$discover --anchor <this-paper's-arxiv-id>`，把 shortlist 作为 "接下来可能想 ingest 的相关论文" 附在 report 里。从不自动 ingest 推荐结果。INIT MODE 下自动跳过。视为用户可见参数：不得仅根据仓库状态擅自开启。
 - `--visualize`（可选，默认 **关闭**）：在 Step 7 rebuild 之后通过 `tools/visualize.py generate-canvas` 重新生成 Canvas 可视化产物。INIT MODE 下自动跳过 —— 由上层 init workflow 在 batch 后统一处理可视化。视为用户可见参数：不得仅根据仓库状态擅自开启。（交互式网页 Graph 视图位于 SPA 的 `app/modules/graph.js`，由 `tools/serve.py` 服务，直接读取 `wiki/graph/`，不需要每次 ingest 单独重生成。）
 
@@ -56,6 +57,7 @@ argument-hint: <local-path-or-arXiv-URL> [--discover] [--visualize]
 - `wiki/index.md` —— APPEND
 - `wiki/log.md` —— 通过工具 APPEND
 - `wiki/canvases/*.canvas` —— CREATE/OVERWRITE（仅当 `--visualize` 开启且非 INIT MODE）
+- `raw/tmp/zotero/{<key>.json,<key>_*.pdf}` —— CREATE（仅当来源是 Zotero 条目引用）
 
 ### 会新增的 Graph edges
 
@@ -100,6 +102,7 @@ export PYTHON_BIN
 2. 如果来源是 arXiv URL，先提取 arXiv ID；可用时通过 `"$PYTHON_BIN" tools/fetch_s2.py paper <arxiv-id>` 恢复标题，然后运行 `"$PYTHON_BIN" tools/init_discovery.py download --raw-root raw --arxiv-id <arxiv-id> --title "<title-or-arxiv-id>"`。后续从返回的 `canonical_ingest_path` 继续。该 helper 会先尝试 arXiv source，再 fallback 到 PDF；不要用 `fetch_arxiv.py` 处理单篇论文，因为它只用于 RSS。
 3. 如果来源是本地 `.tex`，直接使用。
 4. 如果来源是本地 `.pdf`，先走 `references/pdf-preprocessing.md` 的预处理流程，在 `raw/tmp/` 下生成 prepared `.tex`，再继续。
+5. 如果来源是 Zotero 条目引用，按 `references/zotero-source.md` 执行：`tools/zotero_fetch.py item` 把规范化元数据写到 `raw/tmp/zotero/`，`tools/zotero_fetch.py download` 下载 PDF 附件，然后按第 4 种情况用该 PDF 继续。凭据缺失、没有 PDF、或文件字节未同步到 zotero.org 都会 fail-closed 并输出机器可读错误 —— 原样报告并向用户索要本地路径，绝不凭空编造内容。
 
 raw 持久化规则：已经在 `raw/discovered/`、`raw/tmp/`、`raw/papers/` 中的文件，不得被复制或重写到别的 raw 子目录。
 
@@ -243,7 +246,7 @@ Wiki: +1 paper, +{N} methods, +{M} concepts, +{K} edges
 
 ## Constraints
 
-- `raw/papers/`、`raw/notes/`、`raw/web/` 归用户所有且只读。直接本地 `$ingest` 可在 `raw/tmp/` 下新增 prepared sidecar；直接 arXiv ingest 可把源归档写到 `raw/discovered/`。INIT MODE 下 `raw/` 全部只读。
+- `raw/papers/`、`raw/notes/`、`raw/web/` 归用户所有且只读。直接本地 `$ingest` 可在 `raw/tmp/` 下新增 prepared sidecar；直接 arXiv ingest 可把源归档写到 `raw/discovered/`；直接 Zotero ingest 可把元数据/PDF 产物写到 `raw/tmp/zotero/`。INIT MODE 下 `raw/` 全部只读。
 - `wiki/graph/` 由工具维护。仅通过 `tools/research_wiki.py` 修改。
 - slug 始终来自 `tools/research_wiki.py slug`，不得手写。
 - 每一条正向链接必须在同一 turn 内写入其反向链接 —— 这是 wiki 的双向链接不变量。唯一例外是指向 `wiki/foundations/` 的链接，foundations 是终端节点。
@@ -261,7 +264,7 @@ Wiki: +1 paper, +{N} methods, +{M} concepts, +{K} edges
 
 ## Error Handling
 
-详见 `references/error-handling.md`。要点：来源解析按 tex → PDF → vision API → 报告用户的顺序 fallback；S2 不可用时 `importance` 默认取 3 并跳过 citation 回填；DeepXiv 不可用时静默跳过 enrichment；slug 冲突追加数字后缀。
+详见 `references/error-handling.md`。要点：来源解析按 tex → PDF → vision API → 报告用户的顺序 fallback；S2 不可用时 `importance` 默认取 3 并跳过 citation 回填；DeepXiv 不可用时静默跳过 enrichment；slug 冲突追加数字后缀；Zotero 失败（`no_pdf_attachment`、`file_not_on_server`、凭据缺失）终止 Zotero 路径并把工具的错误 JSON 转交用户 —— 绝不只凭元数据编造论文内容。
 
 ## Dependencies
 
@@ -276,6 +279,8 @@ Wiki: +1 paper, +{N} methods, +{M} concepts, +{K} edges
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/`
 - `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"] [--arxiv-id "<recovered-arxiv-id>"]`
+- `"$PYTHON_BIN" tools/zotero_fetch.py item <ref> [-o raw/tmp/zotero/<key>.json]` —— Zotero 元数据（仅当来源是 Zotero 条目引用）
+- `"$PYTHON_BIN" tools/zotero_fetch.py download <ref> [--from-attachment-url]` —— 下载 Zotero PDF 附件到 `raw/tmp/zotero/`（仅当来源是 Zotero 条目引用）
 - `"$PYTHON_BIN" tools/init_discovery.py download --raw-root raw --arxiv-id <id> --title "<title-or-id>"` —— 单篇论文下载到 `raw/discovered/`，优先 arXiv source，fallback 到 PDF
 - `"$PYTHON_BIN" tools/fetch_s2.py paper|citations|references <arxiv-id>`
 - `"$PYTHON_BIN" tools/fetch_deepxiv.py brief|head|social <arxiv-id>`
@@ -288,6 +293,7 @@ Wiki: +1 paper, +{N} methods, +{M} concepts, +{K} edges
 
 ### Skills
 
+- `$pyzotero` —— 独立的第三方 skill，用于临时的 Zotero 库查询（collections、tags、导出）；`$ingest` 本身只需 `tools/zotero_fetch.py`
 - `$init` / `$init` —— 默认通过 INIT MODE SERIAL 逐篇调用 ingest；支持时也可通过 INIT MODE PARALLEL 并行调用子代理
 - `$check` —— 在 `$ingest` 完成后审计 wiki，负责所有 `$ingest` 故意不做的语义检查
 - `$discover` —— 可选后续，当 `--discover` 开启时运行；产出用户可能想接着 ingest 的相关论文 shortlist
@@ -298,3 +304,4 @@ Wiki: +1 paper, +{N} methods, +{M} concepts, +{K} edges
 - Semantic Scholar（via `tools/fetch_s2.py`）
 - DeepXiv（via `tools/fetch_deepxiv.py`，可选；不可用时自动降级）
 - arXiv（源下载）
+- Zotero Web API（via `tools/zotero_fetch.py`，可选；仅用于 Zotero 来源 —— 需要 `.env` 中的 `ZOTERO_*` 凭据）

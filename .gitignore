@@ -113,3 +113,4 @@ config/server.yaml
 /runs/hiera/
 
 tests/*
+.aqg/

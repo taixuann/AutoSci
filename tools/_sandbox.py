@@ -31,6 +31,7 @@ JUSTIFICATIONS: dict[str, str] = {
     "fetch_wikipedia.py": "AutoSci fetch_wikipedia needs network access",
     "daily_arxiv.py": "AutoSci daily_arxiv needs network access",
     "prepare_paper_source.py": "AutoSci prepare_paper_source needs network access",
+    "zotero_fetch.py": "AutoSci zotero_fetch needs network access",
     "backfill_citations.py": "AutoSci backfill_citations needs network access",
     "serve.py": "AutoSci serve needs network access",
 }

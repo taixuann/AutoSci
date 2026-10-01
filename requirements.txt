@@ -6,6 +6,8 @@ markdownify>=0.11.0
 chardet>=5.0.0
 deepxiv-sdk>=0.2.0
 PyYAML>=6.0
+# Zotero Web API client for the $pyzotero skill and $ingest's Zotero source path.
+pyzotero>=1.13
 # Optional: enables $poster Step 5b's event-driven render (matches PaperX's
 # wait semantics). After `pip install playwright`, run `python -m playwright
 # install chromium` once to download the browser. Without it, $poster falls

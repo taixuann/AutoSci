@@ -419,7 +419,7 @@ from Codex `/skills`.
 |-------|-------------|-------|-------------|
 | prefill | `/prefill` | `$prefill` | Seed `wiki/foundations/` with domain background so later ingest runs do not create duplicate concept pages for textbook material |
 | init | `/init` | `$init` | Bootstrap the wiki from your source files, with optional discovery, then ingest the final paper set serially by default, with optional parallel worktree mode |
-| ingest | `/ingest` | `$ingest` | Ingest a paper (local path or arXiv URL) — creates pages and builds all cross-references and graph edges |
+| ingest | `/ingest` | `$ingest` | Ingest a paper (local path, arXiv URL, or Zotero item) — creates pages and builds all cross-references and graph edges |
 | discover | `/discover` | `$discover` | Build a ranked shortlist of candidate papers (anchor-driven, topic-driven, venue-filtered, or from wiki state) without ingesting |
 | edit | `/edit` | `$edit` | Add or remove raw sources, or update wiki content, per user request |
 | ask | `/ask` | `$ask` | Ask the wiki a question — retrieve and synthesize relevant pages, optionally crystallize the answer back into the wiki |
