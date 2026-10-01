@@ -67,6 +67,238 @@ DEFAULT_CANVAS_SIZE = (300, 200)
 # the schema today; other types default to 3 (baseline 1.0x).
 IMPORTANCE_SCALE = {1: 0.7, 2: 0.85, 3: 1.0, 4: 1.2, 5: 1.5}
 
+SNIPPET_MINIMAL_RESEARCH_MONO = """/* ==========================================================================
+   AutoSci Minimal Research - Monochromatic & JetBrains Mono Style
+   ========================================================================== */
+
+/* 1. Global Typography: JetBrains Mono everywhere */
+:root {
+  --font-text-override: 'JetBrains Mono', monospace;
+  --font-monospace-override: 'JetBrains Mono', monospace;
+  --font-interface-override: 'JetBrains Mono', monospace;
+  --font-text: 'JetBrains Mono', monospace;
+  --font-monospace: 'JetBrains Mono', monospace;
+  --font-interface: 'JetBrains Mono', monospace;
+  --font-ui: 'JetBrains Mono', monospace;
+
+  /* Comfortable reading metrics */
+  --line-height-normal: 1.6;
+  --p-spacing: 1rem;
+}
+
+body,
+.markdown-rendered,
+.markdown-source-view,
+.cm-scroller,
+.cm-content,
+.view-header,
+.nav-files-container,
+.workspace-tab-header,
+.status-bar,
+.modal {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* 2. Heading Scale & Weight Hierarchy */
+.markdown-rendered h1, .HyperMD-header-1 {
+  font-size: 1.6em !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  margin-top: 1.4em !important;
+  margin-bottom: 0.6em !important;
+}
+
+.markdown-rendered h2, .HyperMD-header-2 {
+  font-size: 1.35em !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.015em;
+  margin-top: 1.2em !important;
+  margin-bottom: 0.5em !important;
+}
+
+.markdown-rendered h3, .HyperMD-header-3 {
+  font-size: 1.18em !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  margin-top: 1.0em !important;
+  margin-bottom: 0.4em !important;
+}
+
+.markdown-rendered h4, .HyperMD-header-4 {
+  font-size: 1.05em !important;
+  font-weight: 600 !important;
+}
+
+.markdown-rendered h5, .HyperMD-header-5 {
+  font-size: 0.95em !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+}
+
+.markdown-rendered h6, .HyperMD-header-6 {
+  font-size: 0.85em !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--text-faint) !important;
+}
+
+/* 3. Strict Monochromatic Icon Styling */
+.nav-folder-title-content svg,
+.nav-file-title-content svg,
+.tree-item-icon svg,
+.clickable-icon svg,
+.workspace-tab-header-inner-icon svg,
+.status-bar-item svg,
+.sidebar-toggle-button svg,
+.nav-action-button svg,
+.svg-icon {
+  color: var(--text-muted) !important;
+  stroke: currentColor !important;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.clickable-icon:hover svg,
+.nav-action-button:hover svg,
+.workspace-tab-header:hover .workspace-tab-header-inner-icon svg {
+  color: var(--text-normal) !important;
+}
+
+.nav-files-container [class*="icon"],
+.nav-files-container svg {
+  filter: grayscale(100%) !important;
+  opacity: 0.75;
+}
+
+.nav-files-container .is-active [class*="icon"],
+.nav-files-container .is-active svg {
+  opacity: 1;
+}
+
+/* 4. Research Callouts — Monochromatic & Minimalist */
+.callout {
+  border: 1px solid var(--background-modifier-border) !important;
+  background-color: var(--background-secondary) !important;
+  border-left: 3px solid var(--text-muted) !important;
+  border-radius: 4px !important;
+  padding: 10px 14px !important;
+  margin: 1rem 0 !important;
+  font-size: 0.95em;
+}
+
+.callout-title {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  color: var(--text-normal) !important;
+}
+
+.callout-icon svg {
+  color: var(--text-muted) !important;
+}
+
+.callout[data-callout="paper"],
+.callout[data-callout="hypothesis"],
+.callout[data-callout="method"],
+.callout[data-callout="experiment"],
+.callout[data-callout="evidence"],
+.callout[data-callout="finding"],
+.callout[data-callout="summary"] {
+  border-left: 3px solid var(--text-muted) !important;
+}
+
+.callout[data-callout="paper"] {
+  --callout-icon: lucide-file-text;
+}
+
+.callout[data-callout="hypothesis"] {
+  --callout-icon: lucide-sparkles;
+}
+
+.callout[data-callout="method"] {
+  --callout-icon: lucide-cpu;
+}
+
+.callout[data-callout="experiment"] {
+  --callout-icon: lucide-flask-conical;
+}
+
+.callout[data-callout="evidence"] {
+  --callout-icon: lucide-check-circle;
+}
+
+.callout[data-callout="finding"] {
+  --callout-icon: lucide-compass;
+}
+
+.callout[data-callout="summary"] {
+  --callout-icon: lucide-clipboard-list;
+}
+
+/* 5. Clean YAML Frontmatter Cards */
+.metadata-container {
+  font-size: 0.88em;
+  border-radius: 4px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  padding: 6px 12px;
+  margin-bottom: 1.5rem;
+}
+
+/* 6. Canvas Refinements */
+.canvas-node {
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.canvas-node-container {
+  border: 1px solid var(--background-modifier-border) !important;
+}
+
+.canvas-edge-label {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  padding: 2px 6px !important;
+  border-radius: 3px !important;
+  background-color: var(--background-primary) !important;
+  border: 1px solid var(--background-modifier-border) !important;
+  color: var(--text-muted) !important;
+}
+
+/* 7. Tables & Code Blocks */
+.markdown-rendered table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+  width: 100%;
+  margin: 1.2rem 0;
+}
+
+.markdown-rendered th {
+  border-bottom: 2px solid var(--background-modifier-border);
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--text-muted);
+}
+
+.markdown-rendered td {
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding: 6px 10px;
+}
+
+.markdown-rendered .internal-link {
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px dotted var(--text-muted);
+  transition: border-bottom-color 0.15s ease, color 0.15s ease;
+}
+
+.markdown-rendered .internal-link:hover {
+  text-decoration: none;
+  border-bottom: 1px solid var(--text-normal);
+  color: var(--text-normal);
+}
+"""
+
 # ---------------------------------------------------------------------------
 # Helpers — JSONL loading (mirrors research_wiki.py patterns)
 # ---------------------------------------------------------------------------
@@ -487,6 +719,38 @@ def cmd_generate_obsidian_config(wiki_root: str) -> None:
         print(f"Written: {app_path} (new)")
     else:
         print(f"Skipped: {app_path} (already exists)")
+
+    # appearance.json — configure Minimal theme, JetBrains Mono font, 16px size
+    appearance_path = obsidian_dir / "appearance.json"
+    app_data: dict = {}
+    if appearance_path.exists():
+        try:
+            app_data = json.loads(appearance_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            app_data = {}
+
+    app_data.setdefault("cssTheme", "Minimal")
+    app_data.setdefault("theme", "obsidian")
+    app_data["baseFontSize"] = 16
+    app_data["textFontFamily"] = "JetBrains Mono"
+    app_data["monospaceFontFamily"] = "JetBrains Mono"
+    app_data["interfaceFontFamily"] = "JetBrains Mono"
+    snippets = app_data.get("enabledCssSnippets", [])
+    if "minimal-research-mono" not in snippets:
+        snippets.append("minimal-research-mono")
+    app_data["enabledCssSnippets"] = snippets
+    appearance_path.write_text(json.dumps(app_data, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Written: {appearance_path}")
+
+    # CSS snippet for monochromatic icons and JetBrains Mono styling
+    snippets_dir = obsidian_dir / "snippets"
+    snippets_dir.mkdir(parents=True, exist_ok=True)
+    snippet_file = snippets_dir / "minimal-research-mono.css"
+    if not snippet_file.exists():
+        snippet_file.write_text(SNIPPET_MINIMAL_RESEARCH_MONO.strip() + "\n", encoding="utf-8")
+        print(f"Written: {snippet_file} (new)")
+    else:
+        print(f"Skipped: {snippet_file} (already exists)")
 
     print("Done. Open wiki/ in Obsidian and check Graph View settings.")
 
