@@ -45,12 +45,14 @@ publish or deploy anything (privacy Q1 still open — full build stays local).
 - `wiki/` entity files are gitignored in the fork (private-by-default). The
   script reads them from disk — no `git add -f` on wiki files in this plan.
 - Quartz v5, node ≥ 22 (local v22.22.3). Sample build: ~9 s for 6 files.
-  Full mapped content ≈ 16 files — expect well under a minute.
+  Full mapped content = 15 files (6 papers + 6 concepts + 1 method + index.md
+  + log.md) — expect well under a minute.
 
 ## Commands you will need
 
 | Purpose | Command (cwd = worktree `site/`) | Expected on success |
 |---|---|---|
+| Install deps | `npm install` (fresh worktree has no `node_modules`) | exit 0; first-time plugin phase can take ~25–30 min — see `SPIKE-NOTES.md`, run it with a long timeout or backgrounded; do NOT kill it early |
 | Sync | `./scripts/sync-content.sh` (or the python equivalent you write) | exit 0, `content/` mirrors mapping |
 | Build | `npx quartz build` (v5; see spike notes for exact invocation) | exit 0, HTML emitted |
 | Idempotency | run sync twice, `diff -r` content snapshot | no differences second run |
@@ -70,11 +72,18 @@ mapped subtrees, `site/SYNC.md` (usage doc, 10 lines), branch `site/full-sync`.
 
 Script behavior (implement exactly):
 1. Source = `../wiki/` (repo-relative, no absolute paths).
-2. For each PUBLISH subtree above: copy `.md` files into `site/content/<same-subtree>/`,
-   creating dirs as needed. Mirror = delete `content/` files whose wiki source
-   vanished (but never delete `content/index.md` scaffold file — overwrite it
-   from `wiki/index.md` only if you also rework it per spec; otherwise leave a
-   `TODO` comment in the script and report).
+2. Mirror the publish set into `site/content/`:
+   - subtree files: `wiki/papers/*.md`, `wiki/concepts/*.md`, `wiki/methods/*.md`
+     → same relative paths under `site/content/`;
+   - top-level files: `wiki/index.md` → `site/content/index.md`,
+     `wiki/log.md` → `site/content/log.md`;
+   - delete files under `site/content/` whose wiki source no longer exists
+     (keeps the snapshot fresh after deletions, e.g. `$reset`).
+   NOTE: `wiki/index.md` is a YAML slug registry and SITE-SPEC Q4 says it needs
+   rework into a real landing page — that rework is OUT of scope here. Copying
+   it as-is is acceptable for this plan; add a `TODO(index-rework)` comment in
+   the script and say so in the report. Do not delete the stock quartz scaffold
+   `content/index.md` until that rework exists.
 3. `people/` only when invoked with `--include-people` (default off).
 4. Everything else ignored. Script prints `copied N, removed M, skipped K`.
 5. Exit non-zero with a clear message if `../wiki` is missing (wrong cwd guard).
@@ -84,8 +93,11 @@ Script behavior (implement exactly):
 
 ### Step 2: Full mapped build
 
-Run sync, then `npx quartz build`. Record new incompatibilities (if any) in
-`site/SPIKE-NOTES.md` (append, don't rewrite the spike's notes).
+Run sync, then `npx quartz build`. If `node_modules` is missing (fresh
+worktree), run `npm install` first — its plugin phase is slow (~25–30 min,
+see `SPIKE-NOTES.md`); use a long timeout / background run. Record new
+incompatibilities (if any) in `site/SPIKE-NOTES.md` (append, don't rewrite
+the spike's notes).
 
 **Verify**: build exit 0; count emitted HTML ≈ mapped md count.
 

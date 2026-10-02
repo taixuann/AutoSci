@@ -65,7 +65,7 @@ Two audit findings (2026-10-02):
 | pyzotero parity | `ls i18n/en/skills/pyzotero i18n/zh/skills/pyzotero` | both exist |
 | Content parity | `diff -rq i18n/en/skills/pyzotero .agents/skills/pyzotero` and same for zh | no output |
 | Regenerate | `./setup.sh --lang en` | exit 0 |
-| Post-regen check | `diff -rq i18n/en/skills .agents/skills --exclude=shared-references` | no output |
+| Post-regen check | `diff -rq -x shared-references i18n/en/skills .agents/skills` | no output |
 
 ## Scope
 
@@ -91,8 +91,8 @@ Fix `i18n/en/skills/paper-plan/SKILL.md` and
 Do not touch other lines.
 
 **Verify**: `grep -rn 'outputs\$paper-plan' i18n` → no matches;
-`grep -c 'outputs/paper-plan-' i18n/en/skills/paper-plan/SKILL.md` → 3
-(the doc path line + 2 fixed command lines, as in zh).
+`grep -c 'outputs/paper-plan-' i18n/en/skills/paper-plan/SKILL.md` → 6
+(4 pre-existing path mentions + the 2 fixed command lines; same count in zh).
 
 ### Step 2: Add pyzotero to both i18n trees
 
@@ -105,12 +105,26 @@ output; same for zh; `ls i18n/en/skills | wc -l` → 30 and zh → 30.
 
 ### Step 3: Regenerate the active tree
 
-`./setup.sh --lang en`.
+Preferred: `./setup.sh --lang en`.
+
+**If `./setup.sh` fails before its language-activation step** (its Step 1–2
+check Codex, Python, and install dependencies — unavailable in some
+environments), replicate only the activation block (setup.sh lines ~157–168)
+by hand:
+
+```sh
+for d in i18n/en/skills/*/; do n=$(basename "$d"); mkdir -p ".agents/skills/$n"; cp -R "$d"/. ".agents/skills/$n/"; done
+mkdir -p .agents/skills/shared-references
+cp i18n/en/shared-references/*.md .agents/skills/shared-references/
+```
+
+State in your report which path you used.
 
 **Verify**: exit 0. Then `grep -rn 'outputs\$paper-plan' .agents/skills` → no
 matches (regen applied the typo fix to the active copy);
-`diff -rq i18n/en/skills .agents/skills --exclude=shared-references` → only
-`shared-references` excluded, no other output.
+`diff -rq -x shared-references i18n/en/skills .agents/skills` → no output
+(`shared-references` lives only in the active tree by design; BSD `diff` uses
+`-x pattern`, not `--exclude=`).
 
 ### Step 4: Commit
 

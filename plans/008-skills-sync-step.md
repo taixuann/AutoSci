@@ -58,31 +58,36 @@ write): `research_wiki.py (log|set-meta|add-edge|add-citation|transition|init|re
   `ask`, `exp-design`, `exp-eval`, `exp-pilot-eval`, `exp-run`, `exp-status`,
   `ideate`, `ingest`, `init`, `novelty`, `paper-plan`, `prefill`, `refine`,
   `research`, `survey`
-- **Log-only writers (8)** — append only `wiki/log.md`:
+- **Log / appendix writers (8)** — primarily append `wiki/log.md`; some also
+  touch published surfaces: `reset` deletes/rewrites pages (`wiki/<entity>/*`,
+  `index.md`, graph), `rebuttal` appends `wiki/ideas/*` + `wiki/methods/*`.
+  All still get the sync step (published content changes, or `log.md` which is
+  published):
   `check`, `discover`, `paper-compile`, `paper-draft`, `poster`, `rebuttal`,
   `reset`, `visualize`
 - **Direct writer (1)** — writes wiki files directly (not via research_wiki.py
   write cmds): `edit` (its SKILL.md Outputs: "Updated wiki files, `index.md`,
   `log.md`").
-- **Do NOT touch (5)**: `daily-arxiv` (orchestrator; delegates to `$ingest`),
-  `exp-pilot-run` (writes experiment code/logs under `experiments/pilot/code/`
-  — verify whether that path is under `wiki/`; if yes, STOP and report),
-  `hiera-experiment` (sidecar; leaves wiki unchanged per its README),
-  `pyzotero` (third-party library skill, no wiki writes), `review` (produces a
-  report; check its Step 1 output path — if it writes under `wiki/`, STOP and
-  report), `setup` (runs before/wiki-less; explicitly "does not touch the
-  wiki").
+- **Do NOT touch (6)**: `daily-arxiv` (orchestrator; delegates to `$ingest`),
+  `exp-pilot-run` (verified 2026-10-02: writes under root-level `experiments/`
+  — `experiments/pilot/code/{slug}/`, gitignored `experiments/code/` — NOT
+  under `wiki/`; if that ever changes, STOP and report), `hiera-experiment`
+  (sidecar; leaves wiki unchanged per its README), `pyzotero` (third-party
+  library skill, no wiki writes), `review` (verified 2026-10-02: its Writes
+  section says "**None** — read-only query"), `setup` (runs before/wiki-less;
+  explicitly "does not touch the wiki").
 
 **Because `wiki/log.md` is in the site publish set (plan 007 mapping), the
 log-only writers need the sync step too** — log.md is published content.
 
 ### Counts
 
-- `i18n/en/skills` + `i18n/zh/skills`: 29 skill dirs each, file lists identical.
-- `.agents/skills`: 31 dirs (29 + `pyzotero` + `shared-references`). The
-  `pyzotero`/`shared-references` deltas are covered by plan 009 (hygiene), not
-  here. `shared-references` is regenerated from `i18n/$LANG/shared-references`
-  and is expected.
+- `i18n/en/skills` + `i18n/zh/skills`: 29 skill dirs each before plan 009; 30
+  each after (pyzotero added). The writer classification above is unaffected —
+  pyzotero stays excluded. File lists are identical en↔zh.
+- `.agents/skills`: 31 dirs before 009 (29 + `pyzotero` + `shared-references`);
+  after 009, 31 (30 + `shared-references`). `shared-references` is regenerated
+  from `i18n/$LANG/shared-references` by `setup.sh` — expected.
 
 ### Sync step text (canonical — use verbatim)
 
@@ -117,7 +122,7 @@ Append-only diffs are a review requirement.
 | Append check (zh) | `grep -rln '最后一步：同步站点快照' i18n/zh/skills/` | 24 files |
 | Parity | `diff <(grep -rln 'sync-content' i18n/en/skills \| sed 's\|i18n/en/\|\|') <(grep -rln 'sync-content' i18n/zh/skills \| sed 's\|i18n/zh/\|\|')` | no output |
 | Regenerate | `./setup.sh --lang en` | exits 0; `.agents/skills` refreshed |
-| Spot-check regen | `grep -rln 'sync-content' .agents/skills/` | 24 files (para path depends on 009 fix ordering) |
+| Spot-check regen | `grep -rln 'sync-content' .agents/skills/` | 24 files |
 | Dry run sync | `cd /private/tmp/rv-exec-007/site && ./scripts/sync-content.sh` (007 worktree) | exit 0 |
 
 ## Scope
@@ -166,7 +171,21 @@ parity command above → no output.
 
 ### Step 4: Regenerate the active tree
 
-`./setup.sh --lang en` (current lang marker `.agents/.current-lang` is `en`).
+Preferred: `./setup.sh --lang en` (current lang marker `.agents/.current-lang`
+is `en`).
+
+**If `./setup.sh` fails before its language-activation step** (its Step 1–2
+check Codex, Python, and install dependencies — unavailable in some
+environments), replicate only the activation block (setup.sh lines ~157–168)
+by hand:
+
+```sh
+for d in i18n/en/skills/*/; do n=$(basename "$d"); mkdir -p ".agents/skills/$n"; cp -R "$d"/. ".agents/skills/$n/"; done
+mkdir -p .agents/skills/shared-references
+cp i18n/en/shared-references/*.md .agents/skills/shared-references/
+```
+
+State in your report which path you used.
 
 **Verify**: exits 0; `grep -rln 'sync-content' .agents/skills/` → 24 files;
 `git status --short` shows the regenerated `.agents/skills/*/SKILL.md` modified
@@ -174,8 +193,9 @@ parity command above → no output.
 
 ### Step 5: Dry run the sync step
 
-From the plan-007 worktree (e.g. `/private/tmp/rv-exec-007/site`), run
-`./scripts/sync-content.sh`. This proves the appended instruction is runnable.
+From the plan-007 worktree (locate it with `git worktree list`; e.g.
+`/private/tmp/rv-exec-007/site`), run `./scripts/sync-content.sh`. This proves
+the appended instruction is runnable.
 
 **Verify**: exit 0; report its printed counts.
 

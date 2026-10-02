@@ -35,6 +35,47 @@ then the skills that call it).
   are gitignored (private-by-default). No wiki content gets pushed until the
   operator answers spec Q1. All plans default to local-only branches.
 
+## Plan review log (2026-10-02, advisor audit pass)
+
+Fixes applied during a fresh review of 007/008/009:
+
+- **007**: top-level publish mapping made explicit (`wiki/index.md` →
+  `site/content/index.md`, `wiki/log.md` → `site/content/log.md`); file count
+  corrected to 15; `npm install` prerequisite + slow plugin phase added; note
+  that `index.md` rework (SITE-SPEC Q4) is out of scope with a TODO marker.
+- **008**: `exp-pilot-run`/`review` verified non-writers; `reset`/`rebuttal`
+  nuance added (reset deletes published pages, rebuttal writes ideas/methods);
+  counts updated for the post-009 tree state; `setup.sh` manual-activation
+  fallback added; dry-run worktree located via `git worktree list`.
+- **009**: `grep -c` expectation corrected to 6 (4 path mentions + 2 fixed
+  command lines); `setup.sh` fallback added; BSD `diff -x` (not `--exclude=`,
+  which macOS BSD diff rejects) — verified experimentally.
+- All plans: index references point at `plans/README.md` (they live in this
+  repo now, not `~/.opencode/plan`).
+
+## How to run (operator)
+
+Execution order: **009 → 007 → 008**. For each, use the improve skill's
+execute flow in a fresh conversation message:
+
+```text
+@improve execute 009      # typo fix + pyzotero i18n parity (branch site/skills-hygiene)
+@improve execute 007      # sync script + full mapped build (branch site/full-sync)
+@improve execute 008      # append sync step to 24 writers × en/zh (branch site/skills-sync-step)
+```
+
+Each `execute` dispatches an executor into an isolated worktree; the advisor
+reviews the diff and renders a verdict. After approval, merge the site
+branches into `autosci-codex` (one-branch goal) — locally only:
+
+```sh
+cd /Users/tai/workspace/research-projects/autosci
+git merge site/skills-hygiene site/full-sync site/skills-sync-step
+```
+
+The merge is the operator's decision (advisor never merges/pushes). Do NOT
+push until SITE-SPEC Q1 (privacy) is answered — the fork is PUBLIC.
+
 ## Findings considered and rejected
 
 - "Publish the 5 spike sample pages as-is": blocked by privacy gate Q1 — the
