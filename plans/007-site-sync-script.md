@@ -4,7 +4,7 @@
 > verification command and confirm the expected result before moving to the
 > next step. If anything in the "STOP conditions" section occurs, stop and
 > report — do not improvise. When done, update the status row for this plan
-> in the index (`/Users/tai/.opencode/plan/README.md`).
+> in the index (`plans/README.md`).
 >
 > **Drift check (run first)**: In `/Users/tai/workspace/research-projects/autosci`,
 > branch `spike/quartz-site` must exist locally (tip `09ddf07` unless reconciled).
